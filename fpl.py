@@ -15,8 +15,7 @@ else:
     else:
         pass
 
-entire_data = requests.get('https://fantasy.premierleague.com \
-                    /drf/bootstrap-static')
+entire_data = requests.get('https://fantasy.premierleague.com/drf/bootstrap-static')
 player_data = entire_data.json()['elements']
 teams_data = entire_data.json()['teams']
 
@@ -29,16 +28,14 @@ for a in player_data:
     row = {"name": a['web_name'], 'team': teams[a['team_code']]}
     players[a['id']] = row
 
-r = requests.get('https://fantasy.premierleague.com/drf/leagues- \
-            classic-standings/%s' % str(sys.argv[1]))
+r = requests.get('https://fantasy.premierleague.com/drf/leagues-classic-standings/%s' % str(sys.argv[1]))
 group_data = r.json()
 in_data = group_data['standings']['results']
 
 group_data = {}
 winner = {"point": 0, "player": []}
 for a in in_data:
-    r1 = requests.get('https://fantasy.premierleague.com/drf/entry/%s/event \
-                       /%s/picks' % (str(a['entry']), str(sys.argv[2])))
+    r1 = requests.get('https://fantasy.premierleague.com/drf/entry/%s/event/%s/picks' % (str(a['entry']), str(sys.argv[2])))
     row = {"manager": a['entry_name'], "rank": a['rank'], "player_name":
            a['player_name'], "main": [], "bench": []}
     if r1.status_code == 200:
