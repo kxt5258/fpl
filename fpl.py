@@ -1,23 +1,41 @@
-
+"""
+GET INFO ON MANAGERS: https://fantasy.premierleague.com/drf/leagues-classic-standings/246908
+"""
 import sys
 import requests
 from tabulate import tabulate
 
-if len(sys.argv) < 3:
-    print("USAGE: fpl.py group_id gameweek")
+if len(sys.argv) < 2:
+    print("USAGE: fpl.py group_id gameweek \n Example: fpl.py 120620 2")
     sys.exit()
 else:
-    if not (sys.argv[1]).isnumeric() or not (sys.argv[2]).isnumeric():
+    if not (sys.argv[1]).isnumeric() :
         print("Group ID and Gameweek should be numericals")
         sys.exit()
-    elif int(sys.argv[2]) > 38 or int(sys.argv[2]) < 1:
-        print("Gameweek should be between 1 and 38")
-        sys.exit()
+    elif int(sys.argv[1]) > 38 or int(sys.argv[1]) < 1:
+        if int(sys.argv[1]) == 0:
+            r = requests.get('https://fantasy.premierleague.com/api/leagues-classic/120620/standings/', allow_redirects=False)
+            data = r.json()
+            manager_data = data['new_entries']['results']
+            data = []
+            for a in manager_data:
+                row = [a['player_first_name'] + " " + a['player_last_name'], a['entry_name'], a['entry']]
+                data.append(row)
+
+            print(tabulate(data, ["Manager", "Team Name", "Team ID"]))
+            sys.exit()
+        else:
+            print("Gameweek should be between 1 and 38")
+            print(sys.argv[1])
+            sys.exit()
     else:
         pass
 
 print("Getting team and player data")
-entire_data = requests.get('https://fantasy.premierleague.com/drf/bootstrap-static')
+entire_data = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/', allow_redirects=False)
+if entire_data.status_code != 200:
+    print("ERROR: Could be one of the following:\n1. Not connected to network\n2. Gameweek is updating")
+    sys.exit()
 player_data = entire_data.json()['elements']
 teams_data = entire_data.json()['teams']
 
@@ -31,7 +49,10 @@ for a in player_data:
     players[a['id']] = row
 
 print("Getting group data")
-r = requests.get('https://fantasy.premierleague.com/drf/leagues-classic-standings/%s' % str(sys.argv[1]))
+r = requests.get('https://fantasy.premierleague.com/api/leagues-classic/120620/standings/', allow_redirects=False)
+if r.status_code != 200:
+    print("ERROR: Could be one of the following:\n1. Not connected to network\n2. Gameweek is updating")
+    sys.exit()
 group_data = r.json()
 in_data = group_data['standings']['results']
 
@@ -39,8 +60,8 @@ print("Getting squad picks data")
 group_data = {}
 winner = {"point": 0, "player": []}
 for a in in_data:
-    r1 = requests.get('https://fantasy.premierleague.com/drf/entry/%s/event/%s/picks' % (str(a['entry']), str(sys.argv[2])))
-    row = {"manager": a['entry_name'], "rank": a['rank'], "player_name":
+    r1 = requests.get('https://fantasy.premierleague.com/api/entry/%s/event/%s/picks/' % (str(a['entry']), str(sys.argv[1])), allow_redirects=False)
+    row = {"manager": a['entry_name'], "man_id": a['entry'], "rank": a['rank'], "player_name":
            a['player_name'], "main": [], "bench": []}
     if r1.status_code == 200:
         data = r1.json()
@@ -88,10 +109,10 @@ for win in winner['player']:
 data = []
 for member in group_data:
     a = group_data[member]
-    row = [a['manager'], a['player_name'], players[a['captain']]['name'],
-           players[a['vice_captain']]['name'], a['active_chip'], a['points'],
+    row = [a['manager'], a['man_id'], a['player_name'], players[a['captain']]['name'],
+           a['active_chip'], a['points'],
            a['transfer_cost'], a['actual_point'], a['winner'], a['total_points']]
     data.append(row)
 
-print(tabulate(data, ['Team', 'Manager', 'Captain', 'Vice Captain', 'Chips',
-                      'GW Pts', 'Xfer Pts', 'Point', 'Winner', 'Total Pts']))
+print(tabulate(data, ['Team', 'Team ID', 'Manager', 'Captain', 'Chips',
+                      'GW Pts', 'Xfer Pts', 'Point', 'Winner', 'Total Points']))
